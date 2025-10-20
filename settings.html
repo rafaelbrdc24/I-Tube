@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Configurações - I Tube</title>
+    <link rel="stylesheet" href="estilo.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="settings-page">
+        <div class="settings-header">
+            <h1>⚙️ Configurações</h1>
+            <p>Personalize sua experiência com diferentes temas</p>
+        </div>
+
+        <div class="theme-section">
+            <h2>🎨 Escolha seu Tema</h2>
+            <div class="theme-grid">
+                <div class="theme-option active" data-theme="green" onclick="selectTheme('green')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);">
+                        <span class="theme-emoji">🌿</span>
+                    </div>
+                    <div class="theme-name">Verde</div>
+                </div>
+
+                <div class="theme-option" data-theme="red" onclick="selectTheme('red')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
+                        <span class="theme-emoji">❤️</span>
+                    </div>
+                    <div class="theme-name">Vermelho</div>
+                </div>
+
+                <div class="theme-option" data-theme="blue" onclick="selectTheme('blue')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                        <span class="theme-emoji">💙</span>
+                    </div>
+                    <div class="theme-name">Azul</div>
+                </div>
+
+                <div class="theme-option" data-theme="yellow" onclick="selectTheme('yellow')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%);">
+                        <span class="theme-emoji">💛</span>
+                    </div>
+                    <div class="theme-name">Amarelo</div>
+                </div>
+
+                <div class="theme-option" data-theme="pink" onclick="selectTheme('pink')">
+                    <div class="theme-preview" style="background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);">
+                        <span class="theme-emoji">💖</span>
+                    </div>
+                    <div class="theme-name">Rosa</div>
+                </div>
+            </div>
+        </div>
+
+        <div style="text-align: center;">
+            <button class="back-btn" onclick="goBack()">← Voltar ao I Tube</button>
+        </div>
+    </div>
+
+    <script>
+        // Carrega o tema salvo
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('selectedTheme') || 'green';
+            document.body.setAttribute('data-theme', savedTheme);
+            
+            // Atualiza o tema ativo na interface
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-theme="${savedTheme}"]`).classList.add('active');
+        }
+
+        // Seleciona um tema
+        function selectTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            localStorage.setItem('selectedTheme', theme);
+            
+            // Atualiza o tema ativo na interface
+            document.querySelectorAll('.theme-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+        }
+
+        // Volta para a página principal
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        // Carrega o tema ao inicializar
+        loadTheme();
+    </script>
+</body>
+</html>

@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Playlists - I Tube</title>
+    <link rel="stylesheet" href="estilo.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="settings-page">
+        <div class="settings-header">
+            <h1>🎵 Minhas Playlists</h1>
+            <p>Crie, edite e reproduza suas playlists em ordem de adição</p>
+        </div>
+
+        <div class="theme-section">
+            <h2>➕ Criar nova playlist</h2>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+                <input id="newPlaylistName" type="text" placeholder="Nome da playlist" style="flex:1; padding:12px 16px; border-radius:12px; border:none;">
+                <button class="back-btn" onclick="createPlaylist()">Criar</button>
+                <button class="back-btn" onclick="goBack()">← Voltar ao I Tube</button>
+            </div>
+        </div>
+
+        <div class="theme-section">
+            <h2>📚 Playlists</h2>
+            <div id="playlistList" class="theme-grid"></div>
+        </div>
+    </div>
+
+    <script>
+        function loadTheme() {
+            const savedTheme = localStorage.getItem('selectedTheme') || 'green';
+            document.body.setAttribute('data-theme', savedTheme);
+        }
+
+        function goBack() {
+            window.location.href = 'index.html';
+        }
+
+        function getPlaylists() {
+            return JSON.parse(localStorage.getItem('playlists')) || {};
+        }
+
+        function savePlaylists(playlists) {
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+        }
+
+        function createPlaylist() {
+            const input = document.getElementById('newPlaylistName');
+            const name = (input.value || '').trim();
+            if (!name) return alert('Digite um nome para a playlist.');
+            const playlists = getPlaylists();
+            if (playlists[name]) return alert('Já existe uma playlist com esse nome.');
+            playlists[name] = [];
+            savePlaylists(playlists);
+            input.value = '';
+            renderPlaylists();
+        }
+
+        function deletePlaylist(name) {
+            const playlists = getPlaylists();
+            if (!playlists[name]) return;
+            if (!confirm(`Excluir playlist "${name}"?`)) return;
+            delete playlists[name];
+            savePlaylists(playlists);
+            renderPlaylists();
+        }
+
+        function playPlaylist(name) {
+            const playlists = getPlaylists();
+            const items = playlists[name] || [];
+            if (items.length === 0) return alert('Playlist vazia.');
+            // Abre o player com o primeiro vídeo e cria fila manual (simplificada via query string)
+            const ids = items.map(v => v.id);
+            const first = ids[0];
+            // Leva para index com hash simples contendo a lista (fallback: toca o primeiro)
+            localStorage.setItem('currentQueue', JSON.stringify(ids));
+            window.location.href = 'index.html';
+        }
+
+        function renderPlaylists() {
+            const list = document.getElementById('playlistList');
+            list.innerHTML = '';
+            const playlists = getPlaylists();
+            const names = Object.keys(playlists);
+            if (names.length === 0) {
+                list.innerHTML = '<div class="error-message">Você ainda não tem playlists.</div>';
+                return;
+            }
+            names.forEach(name => {
+                const count = playlists[name].length;
+                const div = document.createElement('div');
+                div.className = 'theme-option';
+                div.innerHTML = `
+                    <div class="theme-preview" style="background: var(--secondary-gradient);"></div>
+                    <div class="theme-name">${name}</div>
+                    <div style="color: var(--text-secondary); margin-top:6px;">${count} vídeo(s)</div>
+                    <div style="display:flex; gap:8px; justify-content:center; margin-top:12px;">
+                        <button class="back-btn" style="padding:10px 16px;" onclick="playPlaylist('${name.replace(/'/g, "\\'")}')">▶️ Reproduzir</button>
+                        <button class="back-btn" style="padding:10px 16px; background:#ff6b6b;" onclick="deletePlaylist('${name.replace(/'/g, "\\'")}')">🗑️ Excluir</button>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        loadTheme();
+        renderPlaylists();
+    </script>
+</body>
+</html>
+
+
