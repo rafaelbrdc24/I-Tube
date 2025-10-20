@@ -18,41 +18,96 @@
         </div>
 
         <div class="theme-section">
-            <h2>🎨 Escolha seu Tema</h2>
-            <div class="theme-grid">
-                <div class="theme-option active" data-theme="green" onclick="selectTheme('green')">
-                    <div class="theme-preview" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);">
-                        <span class="theme-emoji">🌿</span>
+            <h2>🎨 Configurações de Tema</h2>
+            
+            <!-- Seletor de Modo (Claro/Escuro) -->
+            <div class="mode-selector">
+                <h3>🌓 Modo de Exibição</h3>
+                <div class="mode-options">
+                    <div class="mode-option active" data-mode="light" onclick="selectMode('light')">
+                        <div class="mode-preview light">
+                            <span class="mode-emoji">☀️</span>
+                        </div>
+                        <div class="mode-name">Claro</div>
                     </div>
-                    <div class="theme-name">Verde</div>
+                    <div class="mode-option" data-mode="dark" onclick="selectMode('dark')">
+                        <div class="mode-preview dark">
+                            <span class="mode-emoji">🌙</span>
+                        </div>
+                        <div class="mode-name">Escuro</div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="theme-option" data-theme="red" onclick="selectTheme('red')">
-                    <div class="theme-preview" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
-                        <span class="theme-emoji">❤️</span>
+            <!-- Seletor de Cores -->
+            <div class="color-selector">
+                <h3>🎨 Cor do Tema</h3>
+                <div class="theme-grid">
+                    <div class="theme-option active" data-color="green" onclick="selectColor('green')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #4caf50 0%, #2e7d32 100%);">
+                            <span class="theme-emoji">🌿</span>
+                        </div>
+                        <div class="theme-name">Verde</div>
                     </div>
-                    <div class="theme-name">Vermelho</div>
+
+                    <div class="theme-option" data-color="red" onclick="selectColor('red')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #f44336 0%, #d32f2f 100%);">
+                            <span class="theme-emoji">❤️</span>
+                        </div>
+                        <div class="theme-name">Vermelho</div>
+                    </div>
+
+                    <div class="theme-option" data-color="blue" onclick="selectColor('blue')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
+                            <span class="theme-emoji">💙</span>
+                        </div>
+                        <div class="theme-name">Azul</div>
+                    </div>
+
+                    <div class="theme-option" data-color="purple" onclick="selectColor('purple')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);">
+                            <span class="theme-emoji">💜</span>
+                        </div>
+                        <div class="theme-name">Roxo</div>
+                    </div>
+
+                    <div class="theme-option" data-color="orange" onclick="selectColor('orange')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);">
+                            <span class="theme-emoji">🧡</span>
+                        </div>
+                        <div class="theme-name">Laranja</div>
+                    </div>
+
+                    <div class="theme-option" data-color="pink" onclick="selectColor('pink')">
+                        <div class="theme-preview" style="background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);">
+                            <span class="theme-emoji">💖</span>
+                        </div>
+                        <div class="theme-name">Rosa</div>
+                    </div>
                 </div>
+            </div>
 
-                <div class="theme-option" data-theme="blue" onclick="selectTheme('blue')">
-                    <div class="theme-preview" style="background: linear-gradient(135deg, #2196f3 0%, #1976d2 100%);">
-                        <span class="theme-emoji">💙</span>
+            <!-- Preview do Tema -->
+            <div class="theme-preview-section">
+                <h3>👁️ Preview do Tema</h3>
+                <div class="preview-container">
+                    <div class="preview-header">
+                        <h4>I Tube</h4>
+                        <button class="preview-btn">⚙️</button>
                     </div>
-                    <div class="theme-name">Azul</div>
-                </div>
-
-                <div class="theme-option" data-theme="yellow" onclick="selectTheme('yellow')">
-                    <div class="theme-preview" style="background: linear-gradient(135deg, #ffeb3b 0%, #fbc02d 100%);">
-                        <span class="theme-emoji">💛</span>
+                    <div class="preview-search">
+                        <input type="text" placeholder="Pesquisar vídeos..." readonly>
+                        <button class="preview-search-btn">🔍</button>
                     </div>
-                    <div class="theme-name">Amarelo</div>
-                </div>
-
-                <div class="theme-option" data-theme="pink" onclick="selectTheme('pink')">
-                    <div class="theme-preview" style="background: linear-gradient(135deg, #e91e63 0%, #c2185b 100%);">
-                        <span class="theme-emoji">💖</span>
+                    <div class="preview-content">
+                        <div class="preview-video">
+                            <div class="preview-thumbnail"></div>
+                            <div class="preview-info">
+                                <h5>Exemplo de Vídeo</h5>
+                                <p>Canal Exemplo</p>
+                            </div>
+                        </div>
                     </div>
-                    <div class="theme-name">Rosa</div>
                 </div>
             </div>
         </div>
@@ -63,28 +118,55 @@
     </div>
 
     <script>
-        // Carrega o tema salvo
-        function loadTheme() {
-            const savedTheme = localStorage.getItem('selectedTheme') || 'green';
-            document.body.setAttribute('data-theme', savedTheme);
+        // Carrega as configurações salvas
+        function loadSettings() {
+            const savedMode = localStorage.getItem('themeMode') || 'light';
+            const savedColor = localStorage.getItem('themeColor') || 'green';
             
-            // Atualiza o tema ativo na interface
-            document.querySelectorAll('.theme-option').forEach(option => {
-                option.classList.remove('active');
-            });
-            document.querySelector(`[data-theme="${savedTheme}"]`).classList.add('active');
+            // Aplica o tema combinado
+            applyTheme(savedMode, savedColor);
+            
+            // Atualiza a interface
+            updateModeUI(savedMode);
+            updateColorUI(savedColor);
         }
 
-        // Seleciona um tema
-        function selectTheme(theme) {
-            document.body.setAttribute('data-theme', theme);
-            localStorage.setItem('selectedTheme', theme);
-            
-            // Atualiza o tema ativo na interface
+        // Aplica o tema combinado
+        function applyTheme(mode, color) {
+            const themeClass = `${mode}-${color}`;
+            document.body.setAttribute('data-theme', themeClass);
+            localStorage.setItem('themeMode', mode);
+            localStorage.setItem('themeColor', color);
+        }
+
+        // Seleciona o modo (claro/escuro)
+        function selectMode(mode) {
+            const currentColor = localStorage.getItem('themeColor') || 'green';
+            applyTheme(mode, currentColor);
+            updateModeUI(mode);
+        }
+
+        // Seleciona a cor do tema
+        function selectColor(color) {
+            const currentMode = localStorage.getItem('themeMode') || 'light';
+            applyTheme(currentMode, color);
+            updateColorUI(color);
+        }
+
+        // Atualiza a UI do modo
+        function updateModeUI(mode) {
+            document.querySelectorAll('.mode-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            document.querySelector(`[data-mode="${mode}"]`).classList.add('active');
+        }
+
+        // Atualiza a UI da cor
+        function updateColorUI(color) {
             document.querySelectorAll('.theme-option').forEach(option => {
                 option.classList.remove('active');
             });
-            document.querySelector(`[data-theme="${theme}"]`).classList.add('active');
+            document.querySelector(`[data-color="${color}"]`).classList.add('active');
         }
 
         // Volta para a página principal
@@ -92,8 +174,8 @@
             window.location.href = 'index.html';
         }
 
-        // Carrega o tema ao inicializar
-        loadTheme();
+        // Carrega as configurações ao inicializar
+        loadSettings();
     </script>
 </body>
 </html>

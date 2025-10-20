@@ -29,6 +29,29 @@
         <!-- Os vídeos serão carregados aqui dinamicamente -->
     </main>
 
+    <!-- Modal de Playlists -->
+    <div id="playlist-modal" class="modal-overlay" style="display:none;">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Adicionar à playlist</h3>
+                <button class="modal-close" onclick="closePlaylistModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <label class="modal-label">Selecionar uma existente</label>
+                <div id="playlist-list" class="playlist-list"></div>
+                <div class="modal-sep">ou</div>
+                <label class="modal-label">Criar nova</label>
+                <div class="modal-row">
+                    <input id="new-playlist-name" type="text" placeholder="Nome da nova playlist">
+                    <button class="modal-action" onclick="createNewPlaylistFromModal()">Criar</button>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="modal-secondary" onclick="closePlaylistModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

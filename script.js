@@ -15,8 +15,10 @@ let playlists = JSON.parse(localStorage.getItem('playlists')) || {}; // { nome: 
 
 // Sistema de Temas
 function loadTheme() {
-    const savedTheme = localStorage.getItem('selectedTheme') || 'green';
-    document.body.setAttribute('data-theme', savedTheme);
+    const savedMode = localStorage.getItem('themeMode') || 'light';
+    const savedColor = localStorage.getItem('themeColor') || 'green';
+    const themeClass = `${savedMode}-${savedColor}`;
+    document.body.setAttribute('data-theme', themeClass);
 }
 
 function openSettings() {
@@ -151,6 +153,7 @@ function displayVideos(videos) {
         const addPlaylistBtn = videoElement.querySelector('.add-playlist-btn');
         addPlaylistBtn.addEventListener('click', (e) => {
             e.stopPropagation();
+            window.__lastVideoToAdd = { id: videoId, title, channelTitle };
             promptAddToPlaylist({ id: videoId, title, channelTitle });
         });
 
@@ -182,7 +185,7 @@ function playVideo(videoId, snippet) {
                     ${favorites.includes(videoId) ? '❤️' : '🤍'}
                 </button>
                 <button class="control-btn" onclick="shareVideo('${videoId}', '${title}')" title="Compartilhar">📤</button>
-                <button class="control-btn" onclick="promptAddToPlaylist({ id: '${videoId}', title: '${title.replace(/'/g, "\'")}', channelTitle: '${channelTitle.replace(/'/g, "\'")}' })" title="Adicionar à playlist">➕</button>
+                <button class="control-btn" onclick="(function(){window.__lastVideoToAdd={ id: '${videoId}', title: '${title.replace(/'/g, "\'")}', channelTitle: '${channelTitle.replace(/'/g, "\'")}' }; promptAddToPlaylist(window.__lastVideoToAdd);})()" title="Adicionar à playlist">➕</button>
             </div>
             <iframe 
                 src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
@@ -334,32 +337,34 @@ function shareVideo(videoId, title) {
 
 // -------------------- Playlists --------------------
 function promptAddToPlaylist(video) {
-    // Mostra playlists existentes e opção de criar nova
+    // Abre modal com listas existentes e opção de criar
+    const overlay = document.getElementById('playlist-modal');
+    const listEl = document.getElementById('playlist-list');
+    const inputNew = document.getElementById('new-playlist-name');
+
+    // Renderiza playlists existentes
     const names = Object.keys(playlists);
-    let baseMsg = 'Digite o nome da playlist\n';
-    if (names.length) {
-        baseMsg += `Existentes: ${names.join(', ')}\n`;
+    listEl.innerHTML = '';
+    if (names.length === 0) {
+        listEl.innerHTML = '<div class="error-message" style="margin:0">Nenhuma playlist criada ainda.</div>';
     } else {
-        baseMsg += '(Nenhuma existente ainda)\n';
-    }
-    const playlistName = prompt(baseMsg + '• Para criar nova, digite um novo nome:');
-    if (!playlistName) return;
-
-    const key = playlistName.trim();
-    if (!key) return;
-
-    if (!playlists[key]) {
-        playlists[key] = [];
-    }
-
-    // Evita duplicados consecutivos
-    const last = playlists[key][playlists[key].length - 1];
-    if (!last || last.id !== video.id) {
-        playlists[key].push({ id: video.id, title: video.title, channelTitle: video.channelTitle });
+        names.forEach(name => {
+            const row = document.createElement('div');
+            row.className = 'playlist-item';
+            row.innerHTML = `
+                <span style="color: var(--text-primary);">${name}</span>
+                <button>Adicionar</button>
+            `;
+            row.querySelector('button').onclick = () => {
+                addVideoToPlaylistByName(name, video);
+                closePlaylistModal();
+            };
+            listEl.appendChild(row);
+        });
     }
 
-    localStorage.setItem('playlists', JSON.stringify(playlists));
-    alert(`Adicionado a "${key}"`);
+    inputNew.value = '';
+    overlay.style.display = 'flex';
 }
 
 function removeFromPlaylist(playlistName, index) {
@@ -370,6 +375,39 @@ function removeFromPlaylist(playlistName, index) {
 
 function getPlaylists() {
     return JSON.parse(localStorage.getItem('playlists')) || {};
+}
+
+function addVideoToPlaylistByName(name, video) {
+    if (!playlists[name]) playlists[name] = [];
+    const last = playlists[name][playlists[name].length - 1];
+    if (!last || last.id !== video.id) {
+        playlists[name].push({ id: video.id, title: video.title, channelTitle: video.channelTitle });
+    }
+    localStorage.setItem('playlists', JSON.stringify(playlists));
+}
+
+function closePlaylistModal() {
+    const overlay = document.getElementById('playlist-modal');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function createNewPlaylistFromModal() {
+    const input = document.getElementById('new-playlist-name');
+    const name = (input.value || '').trim();
+    if (!name) return;
+    if (!playlists[name]) playlists[name] = [];
+    localStorage.setItem('playlists', JSON.stringify(playlists));
+    // Re-renderiza a lista e adiciona já o vídeo atual se vier de um card
+    const tempVideo = window.__lastVideoToAdd;
+    if (tempVideo) {
+        addVideoToPlaylistByName(name, tempVideo);
+    }
+    // Atualiza UI
+    input.value = '';
+    // Reabrir promptAddToPlaylist se houver vídeo
+    if (tempVideo) {
+        promptAddToPlaylist(tempVideo);
+    }
 }
 
 // --- Início ---
