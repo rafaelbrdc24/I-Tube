@@ -189,12 +189,31 @@ function playVideo(videoId, snippet) {
                 <button class="control-btn" onclick="shareVideo('${videoId}', '${title}')" title="Compartilhar">📤</button>
                 <button class="control-btn" onclick="(function(){window.__lastVideoToAdd={ id: '${videoId}', title: '${title.replace(/'/g, "\'")}', channelTitle: '${channelTitle.replace(/'/g, "\'")}' }; promptAddToPlaylist(window.__lastVideoToAdd);})()" title="Adicionar à playlist">➕</button>
             </div>
-            <iframe 
-                src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen>
-            </iframe>
+            <div class="video-iframe-container">
+                <iframe 
+                    id="main-video-iframe"
+                    src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+                    frameborder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowfullscreen
+                    onload="checkVideoAvailability(this, '${videoId}', '${title.replace(/'/g, "\\'")}', '${channelTitle.replace(/'/g, "\\'")}')">
+                </iframe>
+                <div id="video-error-overlay" class="video-error-overlay" style="display: none;">
+                    <div class="error-content">
+                        <div class="error-icon">⚠️</div>
+                        <h3>Vídeo Indisponível</h3>
+                        <p>Este vídeo não pode ser reproduzido aqui devido a restrições.</p>
+                        <div class="error-actions">
+                            <button onclick="openVideoOnYouTube('${videoId}')" class="youtube-btn">
+                                🔗 Ver no YouTube
+                            </button>
+                            <button onclick="tryAlternativePlayer('${videoId}', '${title.replace(/'/g, "\\'")}', '${channelTitle.replace(/'/g, "\\'")}')" class="retry-btn">
+                                🔄 Tentar Novamente
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div style="padding: 20px; background: var(--card-background); margin-top: 10px; border-radius: 15px;">
                 <h2 style="margin-bottom: 10px; color: var(--text-primary);">${title}</h2>
                 <p style="color: var(--text-secondary); margin-bottom: 15px;">📺 ${channelTitle}</p>
@@ -447,7 +466,23 @@ function openPopupPlayer(videoId, title, channelTitle) {
     
     // Atualiza o conteúdo do popup
     document.getElementById('popup-video-title').textContent = title;
-    document.getElementById('popup-iframe').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    const popupIframe = document.getElementById('popup-iframe');
+    popupIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    
+    // Adiciona listener para detectar erro no popup
+    popupIframe.onload = function() {
+        setTimeout(() => {
+            try {
+                const popupDoc = popupIframe.contentDocument || popupIframe.contentWindow.document;
+                if (!popupDoc || popupDoc.body.innerHTML.includes('Video unavailable')) {
+                    showPopupError(videoId, title, channelTitle);
+                }
+            } catch (error) {
+                // Se houver erro de CORS, assume que pode ser restrito
+                console.log('Verificando popup...');
+            }
+        }, 2000);
+    };
     
     // Atualiza o botão de favorito
     updatePopupFavoriteButton();
@@ -593,6 +628,157 @@ function playVideoInPopup(videoId, snippet) {
     const title = snippet ? snippet.title : 'Vídeo';
     const channelTitle = snippet ? snippet.channelTitle : 'Canal';
     openPopupPlayer(videoId, title, channelTitle);
+}
+
+// --- Sistema de Detecção de Vídeos Indisponíveis ---
+
+// Verifica se o vídeo está disponível
+function checkVideoAvailability(iframe, videoId, title, channelTitle) {
+    // Aguarda um pouco para o iframe carregar
+    setTimeout(() => {
+        try {
+            // Verifica se o iframe carregou corretamente
+            const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+            
+            // Se não conseguir acessar o documento, pode ser um vídeo restrito
+            if (!iframeDoc || iframeDoc.body.innerHTML.includes('Video unavailable') || 
+                iframeDoc.body.innerHTML.includes('This video is not available') ||
+                iframeDoc.body.innerHTML.includes('Video unavailable')) {
+                showVideoError(videoId, title, channelTitle);
+            }
+        } catch (error) {
+            // Se houver erro de CORS, tenta uma abordagem diferente
+            console.log('Verificando disponibilidade do vídeo...');
+            
+            // Verifica se o iframe carregou após 3 segundos
+            setTimeout(() => {
+                if (iframe.contentWindow) {
+                    try {
+                        // Tenta acessar propriedades do iframe
+                        iframe.contentWindow.postMessage('ping', '*');
+                    } catch (e) {
+                        // Se falhar, provavelmente é um vídeo restrito
+                        showVideoError(videoId, title, channelTitle);
+                    }
+                } else {
+                    showVideoError(videoId, title, channelTitle);
+                }
+            }, 3000);
+        }
+    }, 2000);
+}
+
+// Mostra o overlay de erro
+function showVideoError(videoId, title, channelTitle) {
+    const errorOverlay = document.getElementById('video-error-overlay');
+    if (errorOverlay) {
+        errorOverlay.style.display = 'flex';
+    }
+}
+
+// Abre o vídeo no YouTube
+function openVideoOnYouTube(videoId) {
+    const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+    window.open(youtubeUrl, '_blank');
+}
+
+// Tenta um player alternativo
+function tryAlternativePlayer(videoId, title, channelTitle) {
+    const iframe = document.getElementById('main-video-iframe');
+    if (iframe) {
+        // Tenta diferentes parâmetros de embed
+        const alternativeUrls = [
+            `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&modestbranding=1`,
+            `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&fs=1`,
+            `https://www.youtube.com/embed/${videoId}?autoplay=0&rel=0&cc_load_policy=1`
+        ];
+        
+        let currentIndex = 0;
+        
+        function tryNextUrl() {
+            if (currentIndex < alternativeUrls.length) {
+                iframe.src = alternativeUrls[currentIndex];
+                currentIndex++;
+                
+                // Verifica se funcionou após 3 segundos
+                setTimeout(() => {
+                    const errorOverlay = document.getElementById('video-error-overlay');
+                    if (errorOverlay && errorOverlay.style.display !== 'none') {
+                        tryNextUrl();
+                    }
+                }, 3000);
+            } else {
+                // Se todas as tentativas falharam, mostra mensagem final
+                alert('Este vídeo não pode ser reproduzido devido a restrições. Clique em "Ver no YouTube" para assistir diretamente no site.');
+            }
+        }
+        
+        tryNextUrl();
+    }
+}
+
+// Atualiza a função openPopupPlayer para incluir detecção de erro
+function openPopupPlayerWithErrorHandling(videoId, title, channelTitle) {
+    if (!popupPlayer) initPopupPlayer();
+    
+    currentPopupVideo = { id: videoId, title, channelTitle };
+    
+    // Atualiza o conteúdo do popup
+    document.getElementById('popup-video-title').textContent = title;
+    const popupIframe = document.getElementById('popup-iframe');
+    popupIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    
+    // Adiciona listener para detectar erro no popup
+    popupIframe.onload = function() {
+        setTimeout(() => {
+            try {
+                const popupDoc = popupIframe.contentDocument || popupIframe.contentWindow.document;
+                if (!popupDoc || popupDoc.body.innerHTML.includes('Video unavailable')) {
+                    showPopupError(videoId, title, channelTitle);
+                }
+            } catch (error) {
+                // Se houver erro de CORS, assume que pode ser restrito
+                console.log('Verificando popup...');
+            }
+        }, 2000);
+    };
+    
+    // Atualiza o botão de favorito
+    updatePopupFavoriteButton();
+    
+    // Mostra o popup
+    popupPlayer.style.display = 'flex';
+    popupPlayer.classList.add('show');
+    
+    // Remove a classe de animação após a animação
+    setTimeout(() => {
+        popupPlayer.classList.remove('show');
+    }, 300);
+}
+
+// Mostra erro no popup
+function showPopupError(videoId, title, channelTitle) {
+    const popupIframe = document.getElementById('popup-iframe');
+    if (popupIframe) {
+        popupIframe.style.display = 'none';
+        
+        // Adiciona overlay de erro no popup
+        const popupContent = popupPlayer.querySelector('.popup-video-container');
+        if (popupContent) {
+            popupContent.innerHTML = `
+                <div class="popup-error-overlay">
+                    <div class="popup-error-content">
+                        <div class="popup-error-icon">⚠️</div>
+                        <h4>Vídeo Indisponível</h4>
+                        <p>Este vídeo não pode ser reproduzido no popup.</p>
+                        <button onclick="openVideoOnYouTube('${videoId}')" class="popup-youtube-btn">
+                            🔗 Ver no YouTube
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+    }
 }
 
 // --- Início ---
