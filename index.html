@@ -52,6 +52,44 @@
         </div>
     </div>
 
+    <!-- Popup Player -->
+    <div id="popup-player" class="popup-player" style="display: none;">
+        <div class="popup-header">
+            <div class="popup-title">
+                <span id="popup-video-title">Título do Vídeo</span>
+            </div>
+            <div class="popup-controls">
+                <button class="popup-btn" onclick="minimizePopup()" title="Minimizar">➖</button>
+                <button class="popup-btn" onclick="maximizePopup()" title="Maximizar">⛶</button>
+                <button class="popup-btn" onclick="closePopup()" title="Fechar">✕</button>
+            </div>
+        </div>
+        <div class="popup-content">
+            <div class="popup-video-container">
+                <iframe id="popup-iframe" 
+                        src="" 
+                        frameborder="0" 
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                        allowfullscreen>
+                </iframe>
+            </div>
+            <div class="popup-video-info">
+                <div class="popup-video-actions">
+                    <button class="popup-action-btn" onclick="toggleFavoritePopup()" id="popup-favorite-btn">
+                        <span id="popup-favorite-icon">🤍</span> Favoritar
+                    </button>
+                    <button class="popup-action-btn" onclick="shareVideoPopup()">
+                        📤 Compartilhar
+                    </button>
+                    <button class="popup-action-btn" onclick="addToPlaylistPopup()">
+                        ➕ Playlist
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="popup-resize-handle"></div>
+    </div>
+
     <script src="script.js"></script>
 </body>
 </html>

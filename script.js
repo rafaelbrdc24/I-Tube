@@ -127,6 +127,7 @@ function displayVideos(videos) {
                 <div class="video-meta">
                     <span>📅 ${publishedAt}</span>
                     <div style="display:flex; gap:8px; align-items:center;">
+                        <button class="popup-btn-small" onclick="openPopupPlayer('${videoId}', '${title.replace(/'/g, "\\'")}', '${channelTitle.replace(/'/g, "\\'")}')" title="Abrir em popup">📱</button>
                         <button class="favorite-btn ${isFavorite ? 'favorited' : ''}" data-video-id="${videoId}" title="Favoritar">
                             ${isFavorite ? '❤️' : '🤍'}
                         </button>
@@ -181,6 +182,7 @@ function playVideo(videoId, snippet) {
         <div class="video-player">
             <div class="player-controls">
                 <button class="control-btn" onclick="goBack()" title="Voltar">←</button>
+                <button class="control-btn" onclick="openPopupPlayer('${videoId}', '${title.replace(/'/g, "\\'")}', '${channelTitle.replace(/'/g, "\\'")}')" title="Abrir em popup">📱</button>
                 <button class="control-btn" onclick="toggleFavorite('${videoId}', null)" title="Favoritar">
                     ${favorites.includes(videoId) ? '❤️' : '🤍'}
                 </button>
@@ -193,12 +195,15 @@ function playVideo(videoId, snippet) {
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowfullscreen>
             </iframe>
-            <div style="padding: 20px; background: rgba(255,255,255,0.95); margin-top: 10px; border-radius: 15px;">
-                <h2 style="margin-bottom: 10px; color: #333;">${title}</h2>
-                <p style="color: #666; margin-bottom: 15px;">📺 ${channelTitle}</p>
+            <div style="padding: 20px; background: var(--card-background); margin-top: 10px; border-radius: 15px;">
+                <h2 style="margin-bottom: 10px; color: var(--text-primary);">${title}</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 15px;">📺 ${channelTitle}</p>
                 <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <button onclick="goBack()" style="padding: 10px 20px; background: #667eea; color: white; border: none; border-radius: 25px; cursor: pointer;">
+                    <button onclick="goBack()" style="padding: 10px 20px; background: var(--accent-color); color: white; border: none; border-radius: 25px; cursor: pointer;">
                         ← Voltar aos vídeos
+                    </button>
+                    <button onclick="openPopupPlayer('${videoId}', '${title.replace(/'/g, "\\'")}', '${channelTitle.replace(/'/g, "\\'")}')" style="padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 25px; cursor: pointer;">
+                        📱 Assistir em popup
                     </button>
                     <button onclick="showFavorites()" style="padding: 10px 20px; background: #ff6b6b; color: white; border: none; border-radius: 25px; cursor: pointer;">
                         ❤️ Meus Favoritos
@@ -410,9 +415,192 @@ function createNewPlaylistFromModal() {
     }
 }
 
+// --- Sistema de Popup Player ---
+let popupPlayer = null;
+let currentPopupVideo = null;
+let isDragging = false;
+let dragOffset = { x: 0, y: 0 };
+
+// Inicializa o popup player
+function initPopupPlayer() {
+    popupPlayer = document.getElementById('popup-player');
+    if (!popupPlayer) return;
+
+    // Adiciona event listeners para drag
+    const header = popupPlayer.querySelector('.popup-header');
+    header.addEventListener('mousedown', startDrag);
+    document.addEventListener('mousemove', drag);
+    document.addEventListener('mouseup', endDrag);
+
+    // Adiciona event listener para redimensionamento
+    const resizeHandle = popupPlayer.querySelector('.popup-resize-handle');
+    if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', startResize);
+    }
+}
+
+// Abre o popup player com um vídeo
+function openPopupPlayer(videoId, title, channelTitle) {
+    if (!popupPlayer) initPopupPlayer();
+    
+    currentPopupVideo = { id: videoId, title, channelTitle };
+    
+    // Atualiza o conteúdo do popup
+    document.getElementById('popup-video-title').textContent = title;
+    document.getElementById('popup-iframe').src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    
+    // Atualiza o botão de favorito
+    updatePopupFavoriteButton();
+    
+    // Mostra o popup
+    popupPlayer.style.display = 'flex';
+    popupPlayer.classList.add('show');
+    
+    // Remove a classe de animação após a animação
+    setTimeout(() => {
+        popupPlayer.classList.remove('show');
+    }, 300);
+}
+
+// Fecha o popup player
+function closePopup() {
+    if (popupPlayer) {
+        popupPlayer.style.display = 'none';
+        document.getElementById('popup-iframe').src = '';
+        currentPopupVideo = null;
+    }
+}
+
+// Minimiza o popup
+function minimizePopup() {
+    if (popupPlayer) {
+        popupPlayer.classList.toggle('minimized');
+    }
+}
+
+// Maximiza o popup
+function maximizePopup() {
+    if (popupPlayer) {
+        popupPlayer.classList.toggle('maximized');
+    }
+}
+
+// Atualiza o botão de favorito no popup
+function updatePopupFavoriteButton() {
+    if (!currentPopupVideo) return;
+    
+    const favoriteBtn = document.getElementById('popup-favorite-btn');
+    const favoriteIcon = document.getElementById('popup-favorite-icon');
+    
+    if (favorites.includes(currentPopupVideo.id)) {
+        favoriteIcon.textContent = '❤️';
+        favoriteBtn.style.background = '#ff6b6b';
+    } else {
+        favoriteIcon.textContent = '🤍';
+        favoriteBtn.style.background = 'var(--accent-color)';
+    }
+}
+
+// Toggle favorito no popup
+function toggleFavoritePopup() {
+    if (!currentPopupVideo) return;
+    
+    toggleFavorite(currentPopupVideo.id, null);
+    updatePopupFavoriteButton();
+}
+
+// Compartilhar vídeo do popup
+function shareVideoPopup() {
+    if (!currentPopupVideo) return;
+    shareVideo(currentPopupVideo.id, currentPopupVideo.title);
+}
+
+// Adicionar à playlist do popup
+function addToPlaylistPopup() {
+    if (!currentPopupVideo) return;
+    window.__lastVideoToAdd = currentPopupVideo;
+    promptAddToPlaylist(currentPopupVideo);
+}
+
+// Sistema de drag para mover o popup
+function startDrag(e) {
+    isDragging = true;
+    const rect = popupPlayer.getBoundingClientRect();
+    dragOffset.x = e.clientX - rect.left;
+    dragOffset.y = e.clientY - rect.top;
+    popupPlayer.style.cursor = 'grabbing';
+}
+
+function drag(e) {
+    if (!isDragging) return;
+    
+    e.preventDefault();
+    const x = e.clientX - dragOffset.x;
+    const y = e.clientY - dragOffset.y;
+    
+    // Limita a posição dentro da viewport
+    const maxX = window.innerWidth - popupPlayer.offsetWidth;
+    const maxY = window.innerHeight - popupPlayer.offsetHeight;
+    
+    popupPlayer.style.left = Math.max(0, Math.min(x, maxX)) + 'px';
+    popupPlayer.style.top = Math.max(0, Math.min(y, maxY)) + 'px';
+    popupPlayer.style.right = 'auto';
+    popupPlayer.style.bottom = 'auto';
+}
+
+function endDrag() {
+    isDragging = false;
+    if (popupPlayer) {
+        popupPlayer.style.cursor = 'move';
+    }
+}
+
+// Sistema de redimensionamento
+let isResizing = false;
+
+function startResize(e) {
+    isResizing = true;
+    e.preventDefault();
+    document.addEventListener('mousemove', resize);
+    document.addEventListener('mouseup', endResize);
+}
+
+function resize(e) {
+    if (!isResizing) return;
+    
+    const rect = popupPlayer.getBoundingClientRect();
+    const newWidth = e.clientX - rect.left;
+    const newHeight = e.clientY - rect.top;
+    
+    // Aplica limites mínimos e máximos
+    const minWidth = 300;
+    const minHeight = 200;
+    const maxWidth = window.innerWidth * 0.8;
+    const maxHeight = window.innerHeight * 0.8;
+    
+    popupPlayer.style.width = Math.max(minWidth, Math.min(newWidth, maxWidth)) + 'px';
+    popupPlayer.style.height = Math.max(minHeight, Math.min(newHeight, maxHeight)) + 'px';
+}
+
+function endResize() {
+    isResizing = false;
+    document.removeEventListener('mousemove', resize);
+    document.removeEventListener('mouseup', endResize);
+}
+
+// Modifica a função playVideo para incluir opção de popup
+function playVideoInPopup(videoId, snippet) {
+    const title = snippet ? snippet.title : 'Vídeo';
+    const channelTitle = snippet ? snippet.channelTitle : 'Canal';
+    openPopupPlayer(videoId, title, channelTitle);
+}
+
 // --- Início ---
 // Carrega o tema e os vídeos mais populares do Brasil ao abrir a página
 loadTheme();
+
+// Inicializa o popup player
+initPopupPlayer();
 
 // Se veio de playlists com fila, inicia no primeiro vídeo
 const pendingQueue = JSON.parse(localStorage.getItem('currentQueue') || '[]');
