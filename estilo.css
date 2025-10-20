@@ -71,17 +71,25 @@ header {
     border-bottom: 1px solid rgba(255,255,255,0.1);
     position: relative;
     transition: background 0.3s ease;
+    overflow: visible;
 }
 
 header h1 {
     margin-bottom: 20px;
     font-size: 3em;
     font-weight: 700;
+    color: #fff;
     text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-    background: linear-gradient(45deg, #fff, #e0e0e0);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.brand-icon {
+    width: 48px;
+    height: 48px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+    border-radius: 8px;
 }
 
 .settings-btn {
@@ -100,11 +108,23 @@ header h1 {
     font-size: 1.5em;
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
+    z-index: 10;
 }
 
 .settings-btn:hover {
     background: rgba(255,255,255,0.3);
     transform: scale(1.1) rotate(90deg);
+}
+
+/* Garantir que não haja sobreposição de elementos */
+header > * {
+    position: relative;
+    z-index: auto;
+}
+
+header .settings-btn {
+    position: absolute !important;
+    z-index: 100 !important;
 }
 
 .search-bar {

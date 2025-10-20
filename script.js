@@ -97,7 +97,7 @@ function displayVideos(videos) {
     }
 
     videoContainer.innerHTML = '';
-    
+
     videos.forEach(video => {
         const videoId = video.id.videoId || video.id;
         const snippet = video.snippet;
@@ -117,7 +117,7 @@ function displayVideos(videos) {
         videoElement.innerHTML = `
             <img src="${thumbnailUrl}" alt="${title}" loading="lazy">
             <div class="video-info">
-                <h3>${title}</h3>
+            <h3>${title}</h3>
                 <div class="video-meta">
                     <span class="channel-name">${channelTitle}</span>
                     <span class="view-count">${viewCount} visualizações</span>
@@ -208,32 +208,46 @@ function playVideo(videoId, snippet) {
     // Rola a tela para o topo para ver o vídeo
     window.scrollTo(0, 0);
 
-    // Se houver uma fila salva, configura avanço automático simples
+    // Se houver uma fila salva, configura navegação automática
     const queue = JSON.parse(localStorage.getItem('currentQueue') || '[]');
     if (queue.length > 0) {
         const currentIndex = queue.indexOf(videoId);
-        if (currentIndex > -1 && currentIndex < queue.length - 1) {
-            // Tenta avançar ao finalizar via listener de postMessage do player (fallback com botão)
-            // Adiciona um botão "Próximo" na UI
+        if (currentIndex > -1) {
             const controls = document.querySelector('.player-controls');
             if (controls) {
-                const nextBtn = document.createElement('button');
-                nextBtn.className = 'control-btn';
-                nextBtn.title = 'Próximo da playlist';
-                nextBtn.textContent = '⏭️';
-                nextBtn.onclick = function() {
-                    const nextId = queue[currentIndex + 1];
-                    // Limpa fila ao finalizar
-                    if (currentIndex + 1 >= queue.length - 1) {
-                        localStorage.removeItem('currentQueue');
-                    }
-                    playVideo(nextId, snippet);
-                };
-                controls.appendChild(nextBtn);
+                // Botão Anterior
+                if (currentIndex > 0) {
+                    const prevBtn = document.createElement('button');
+                    prevBtn.className = 'control-btn';
+                    prevBtn.title = 'Anterior da playlist';
+                    prevBtn.textContent = '⏮️';
+                    prevBtn.onclick = function() {
+                        const prevId = queue[currentIndex - 1];
+                        playVideo(prevId, snippet);
+                    };
+                    controls.appendChild(prevBtn);
+                }
+                
+                // Botão Próximo
+                if (currentIndex < queue.length - 1) {
+                    const nextBtn = document.createElement('button');
+                    nextBtn.className = 'control-btn';
+                    nextBtn.title = 'Próximo da playlist';
+                    nextBtn.textContent = '⏭️';
+                    nextBtn.onclick = function() {
+                        const nextId = queue[currentIndex + 1];
+                        // Limpa fila ao finalizar
+                        if (currentIndex + 1 >= queue.length - 1) {
+                            localStorage.removeItem('currentQueue');
+                        }
+                        playVideo(nextId, snippet);
+                    };
+                    controls.appendChild(nextBtn);
+                } else if (currentIndex === queue.length - 1) {
+                    // último item, limpar fila
+                    localStorage.removeItem('currentQueue');
+                }
             }
-        } else if (currentIndex === queue.length - 1) {
-            // último item, limpar fila
-            localStorage.removeItem('currentQueue');
         }
     }
 }
@@ -383,5 +397,5 @@ if (pendingQueue.length > 0) {
         });
 } else {
     showLoading();
-    fetchVideos(popularVideosURL);
+fetchVideos(popularVideosURL);
 }
