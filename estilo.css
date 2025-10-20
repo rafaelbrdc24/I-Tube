@@ -176,6 +176,25 @@ header h1 {
     box-shadow: 0 6px 20px rgba(0,0,0,0.2);
 }
 
+#favorites-button {
+    margin-left: 10px;
+    padding: 15px 20px;
+    background: var(--background-glass);
+    color: var(--text-primary);
+    border: none;
+    cursor: pointer;
+    border-radius: 25px;
+    font-size: 1.05em;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px var(--shadow-color);
+}
+
+#favorites-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+}
+
 main {
     max-width: 1400px;
     margin: 30px auto;
@@ -492,6 +511,11 @@ main {
     
     #search-button {
         border-radius: 25px;
+    }
+    
+    #playlists-button, #favorites-button {
+        margin-left: 0;
+        margin-top: 5px;
     }
     
     main {
