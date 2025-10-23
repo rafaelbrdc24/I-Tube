@@ -10,8 +10,20 @@ const searchButton = document.getElementById('search-button');
 // Estado da aplicação
 let currentVideoId = null;
 let videoHistory = [];
-let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
-let playlists = JSON.parse(localStorage.getItem('playlists')) || {}; // { nome: [{ id, title, channelTitle }] }
+let favorites = [];
+let playlists = {}; // { nome: [{ id, title, channelTitle }] }
+let currentUser = JSON.parse(localStorage.getItem('currentUser')) || null;
+
+// Carrega dados do usuário
+function loadUserData() {
+    if (currentUser) {
+        favorites = JSON.parse(localStorage.getItem(`favorites_${currentUser.id}`)) || [];
+        playlists = JSON.parse(localStorage.getItem(`playlists_${currentUser.id}`)) || {};
+    } else {
+        favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        playlists = JSON.parse(localStorage.getItem('playlists')) || {};
+    }
+}
 
 // Sistema de Temas
 function loadTheme() {
@@ -299,11 +311,19 @@ function toggleFavorite(videoId, button) {
         favorites.unshift(videoId);
     }
     
-    localStorage.setItem('favorites', JSON.stringify(favorites));
+    // Salva favoritos com identificação do usuário se logado
+    const favoritesKey = currentUser ? `favorites_${currentUser.id}` : 'favorites';
+    localStorage.setItem(favoritesKey, JSON.stringify(favorites));
     
     if (button) {
         button.textContent = favorites.includes(videoId) ? '❤️' : '🤍';
         button.classList.toggle('favorited', favorites.includes(videoId));
+    }
+    
+    // Mostra notificação se usuário logado
+    if (currentUser) {
+        const action = favorites.includes(videoId) ? 'adicionado aos' : 'removido dos';
+        showToast(`Vídeo ${action} favoritos!`, 'success');
     }
 }
 
@@ -394,7 +414,10 @@ function promptAddToPlaylist(video) {
 function removeFromPlaylist(playlistName, index) {
     if (!playlists[playlistName]) return;
     playlists[playlistName].splice(index, 1);
-    localStorage.setItem('playlists', JSON.stringify(playlists));
+    
+    // Salva playlists com identificação do usuário se logado
+    const playlistsKey = currentUser ? `playlists_${currentUser.id}` : 'playlists';
+    localStorage.setItem(playlistsKey, JSON.stringify(playlists));
 }
 
 function getPlaylists() {
@@ -407,7 +430,15 @@ function addVideoToPlaylistByName(name, video) {
     if (!last || last.id !== video.id) {
         playlists[name].push({ id: video.id, title: video.title, channelTitle: video.channelTitle });
     }
-    localStorage.setItem('playlists', JSON.stringify(playlists));
+    
+    // Salva playlists com identificação do usuário se logado
+    const playlistsKey = currentUser ? `playlists_${currentUser.id}` : 'playlists';
+    localStorage.setItem(playlistsKey, JSON.stringify(playlists));
+    
+    // Mostra notificação se usuário logado
+    if (currentUser) {
+        showToast(`Vídeo adicionado à playlist "${name}"!`, 'success');
+    }
 }
 
 function closePlaylistModal() {
@@ -781,12 +812,245 @@ function showPopupError(videoId, title, channelTitle) {
     }
 }
 
+// --- Sistema de Autenticação Google ---
+
+// Inicializa o Google Identity Services
+function initializeGoogleAuth() {
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.initialize({
+            client_id: 'YOUR_GOOGLE_CLIENT_ID', // Substitua pelo seu Client ID
+            callback: handleCredentialResponse,
+            auto_select: false,
+            cancel_on_tap_outside: true
+        });
+    }
+}
+
+// Callback para quando o usuário faz login
+function handleCredentialResponse(response) {
+    try {
+        // Decodifica o JWT token
+        const responsePayload = decodeJwtResponse(response.credential);
+        
+        // Salva os dados do usuário
+        currentUser = {
+            id: responsePayload.sub,
+            name: responsePayload.name,
+            email: responsePayload.email,
+            picture: responsePayload.picture,
+            given_name: responsePayload.given_name,
+            family_name: responsePayload.family_name
+        };
+        
+        localStorage.setItem('currentUser', JSON.stringify(currentUser));
+        
+        // Carrega dados do usuário
+        loadUserData();
+        
+        updateUserInterface();
+        
+        // Mostra mensagem de boas-vindas
+        showWelcomeMessage(currentUser.name);
+        
+        console.log('Login realizado com sucesso:', currentUser);
+    } catch (error) {
+        console.error('Erro no login:', error);
+        showError('Erro ao fazer login. Tente novamente.');
+    }
+}
+
+// Função para decodificar JWT (simplificada)
+function decodeJwtResponse(token) {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+        return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+    }).join(''));
+    return JSON.parse(jsonPayload);
+}
+
+// Função para fazer login com Google
+function loginWithGoogle() {
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.prompt();
+    } else {
+        showError('Google Identity Services não carregado. Recarregue a página.');
+    }
+}
+
+// Função para fazer logout
+function logout() {
+    if (typeof google !== 'undefined' && google.accounts) {
+        google.accounts.id.disableAutoSelect();
+    }
+    
+    currentUser = null;
+    localStorage.removeItem('currentUser');
+    
+    // Carrega dados do usuário anônimo
+    loadUserData();
+    
+    updateUserInterface();
+    showToast('Logout realizado com sucesso!', 'info');
+    
+    console.log('Logout realizado');
+}
+
+// Atualiza a interface do usuário
+function updateUserInterface() {
+    const userInfo = document.getElementById('user-info');
+    const loginBtn = document.getElementById('login-btn');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+    
+    if (currentUser) {
+        // Usuário logado
+        userInfo.style.display = 'flex';
+        loginBtn.style.display = 'none';
+        
+        if (userAvatar && userName) {
+            userAvatar.src = currentUser.picture;
+            userAvatar.alt = currentUser.name;
+            userName.textContent = currentUser.given_name || currentUser.name;
+        }
+    } else {
+        // Usuário não logado
+        userInfo.style.display = 'none';
+        loginBtn.style.display = 'flex';
+    }
+}
+
+// Função genérica para mostrar toasts
+function showToast(message, type = 'info') {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Adiciona estilos inline para o toast
+    const bgColor = type === 'success' ? '#4caf50' : type === 'error' ? '#f44336' : '#2196f3';
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${bgColor};
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 300px;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove o toast após 3 segundos
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Mostra mensagem de boas-vindas
+function showWelcomeMessage(name) {
+    // Cria um toast de boas-vindas
+    const toast = document.createElement('div');
+    toast.className = 'welcome-toast';
+    toast.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">👋</span>
+            <span>Bem-vindo(a), ${name}!</span>
+        </div>
+    `;
+    
+    // Adiciona estilos inline para o toast
+    toast.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: var(--accent-color);
+        color: white;
+        padding: 15px 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        max-width: 300px;
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remove o toast após 3 segundos
+    setTimeout(() => {
+        toast.style.animation = 'slideOutRight 0.3s ease-in';
+        setTimeout(() => {
+            if (toast.parentNode) {
+                toast.parentNode.removeChild(toast);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Adiciona estilos CSS para as animações do toast
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+    }
+    
+    .toast-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-weight: 500;
+    }
+    
+    .toast-icon {
+        font-size: 1.2em;
+    }
+`;
+document.head.appendChild(style);
+
 // --- Início ---
 // Carrega o tema e os vídeos mais populares do Brasil ao abrir a página
 loadTheme();
 
 // Inicializa o popup player
 initPopupPlayer();
+
+// Inicializa a autenticação Google
+document.addEventListener('DOMContentLoaded', function() {
+    loadUserData();
+    initializeGoogleAuth();
+    updateUserInterface();
+});
 
 // Se veio de playlists com fila, inicia no primeiro vídeo
 const pendingQueue = JSON.parse(localStorage.getItem('currentQueue') || '[]');

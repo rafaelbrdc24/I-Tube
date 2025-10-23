@@ -9,10 +9,22 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 <body>
     <header>
         <button class="settings-btn" onclick="openSettings()" title="Configurações">⚙️</button>
+        <div class="user-section">
+            <div id="user-info" class="user-info" style="display: none;">
+                <img id="user-avatar" class="user-avatar" src="" alt="Avatar">
+                <span id="user-name" class="user-name"></span>
+                <button id="logout-btn" class="logout-btn" onclick="logout()" title="Sair">🚪</button>
+            </div>
+            <button id="login-btn" class="login-btn" onclick="loginWithGoogle()" title="Entrar com Google">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon">
+                Entrar
+            </button>
+        </div>
         <h1>
             <img src="icon.jpeg" alt="I Tube" class="brand-icon">
             I Tube
