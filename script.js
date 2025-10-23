@@ -816,14 +816,22 @@ function showPopupError(videoId, title, channelTitle) {
 
 // Inicializa o Google Identity Services
 function initializeGoogleAuth() {
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.initialize({
-            client_id: 'YOUR_GOOGLE_CLIENT_ID', // Substitua pelo seu Client ID
-            callback: handleCredentialResponse,
-            auto_select: false,
-            cancel_on_tap_outside: true
-        });
-    }
+    // Aguarda o Google Identity Services carregar
+    const checkGoogle = () => {
+        if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+            google.accounts.id.initialize({
+                client_id: '469579513517-p7b5drbo2ds0m4jubv1l855dcfqvkv8o.apps.googleusercontent.com', // Substitua pelo seu Client ID
+                callback: handleCredentialResponse,
+                auto_select: false,
+                cancel_on_tap_outside: true
+            });
+            console.log('Google Identity Services inicializado');
+        } else {
+            // Tenta novamente após 100ms
+            setTimeout(checkGoogle, 100);
+        }
+    };
+    checkGoogle();
 }
 
 // Callback para quando o usuário faz login
@@ -871,10 +879,19 @@ function decodeJwtResponse(token) {
 
 // Função para fazer login com Google
 function loginWithGoogle() {
-    if (typeof google !== 'undefined' && google.accounts) {
-        google.accounts.id.prompt();
+    console.log('Tentando fazer login com Google...');
+    
+    if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+        try {
+            google.accounts.id.prompt();
+            console.log('Prompt do Google exibido');
+        } catch (error) {
+            console.error('Erro ao exibir prompt do Google:', error);
+            showToast('Erro ao abrir login do Google. Tente novamente.', 'error');
+        }
     } else {
-        showError('Google Identity Services não carregado. Recarregue a página.');
+        console.error('Google Identity Services não disponível');
+        showToast('Google Identity Services não carregado. Recarregue a página.', 'error');
     }
 }
 
@@ -917,6 +934,25 @@ function updateUserInterface() {
         // Usuário não logado
         userInfo.style.display = 'none';
         loginBtn.style.display = 'flex';
+        
+        // Verifica se o Google está disponível
+        if (typeof google === 'undefined' || !google.accounts || !google.accounts.id) {
+            loginBtn.innerHTML = `
+                <span class="google-icon">⚠️</span>
+                Login Indisponível
+            `;
+            loginBtn.title = 'Google Identity Services não carregado';
+            loginBtn.onclick = () => {
+                showToast('Recarregue a página para ativar o login com Google', 'error');
+            };
+        } else {
+            loginBtn.innerHTML = `
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" class="google-icon">
+                Entrar
+            `;
+            loginBtn.title = 'Entrar com Google';
+            loginBtn.onclick = loginWithGoogle;
+        }
     }
 }
 

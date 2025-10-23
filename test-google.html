@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Google OAuth - I Tube</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .test-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover { background: #3367d6; }
+        #user-info {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Teste do Google OAuth</h1>
+        
+        <div id="status-container">
+            <div class="status info">Aguardando carregamento do Google Identity Services...</div>
+        </div>
+        
+        <div id="login-section">
+            <button id="login-btn" onclick="loginWithGoogle()">
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" style="width: 18px; height: 18px; margin-right: 8px;">
+                Entrar com Google
+            </button>
+        </div>
+        
+        <div id="user-info">
+            <h3>Usuário Logado:</h3>
+            <img id="user-avatar" src="" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; margin: 10px 0;">
+            <p><strong>Nome:</strong> <span id="user-name"></span></p>
+            <p><strong>Email:</strong> <span id="user-email"></span></p>
+            <button onclick="logout()">Sair</button>
+        </div>
+        
+        <div style="margin-top: 30px; padding: 15px; background: #e9ecef; border-radius: 5px;">
+            <h4>📋 Instruções:</h4>
+            <ol>
+                <li>Substitua <code>YOUR_GOOGLE_CLIENT_ID</code> no arquivo <code>script.js</code> pelo seu Client ID real</li>
+                <li>Configure as URLs autorizadas no Google Cloud Console</li>
+                <li>Teste o login clicando no botão acima</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        
+        function updateStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            container.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function initializeGoogleAuth() {
+            const checkGoogle = () => {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    google.accounts.id.initialize({
+                        client_id: '469579513517-p7b5drbo2ds0m4jubv1l855dcfqvkv8o.apps.googleusercontent.com', // Substitua pelo seu Client ID
+                        callback: handleCredentialResponse,
+                        auto_select: false,
+                        cancel_on_tap_outside: true
+                    });
+                    updateStatus('✅ Google Identity Services carregado com sucesso!', 'success');
+                } else {
+                    setTimeout(checkGoogle, 100);
+                }
+            };
+            checkGoogle();
+        }
+        
+        function handleCredentialResponse(response) {
+            try {
+                const responsePayload = decodeJwtResponse(response.credential);
+                
+                currentUser = {
+                    id: responsePayload.sub,
+                    name: responsePayload.name,
+                    email: responsePayload.email,
+                    picture: responsePayload.picture,
+                    given_name: responsePayload.given_name,
+                    family_name: responsePayload.family_name
+                };
+                
+                updateUserInterface();
+                updateStatus(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.name}!`, 'success');
+                
+                console.log('Login realizado:', currentUser);
+            } catch (error) {
+                console.error('Erro no login:', error);
+                updateStatus('❌ Erro ao fazer login. Verifique o console para mais detalhes.', 'error');
+            }
+        }
+        
+        function decodeJwtResponse(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+        
+        function loginWithGoogle() {
+            if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                try {
+                    google.accounts.id.prompt();
+                } catch (error) {
+                    updateStatus('❌ Erro ao exibir prompt do Google: ' + error.message, 'error');
+                }
+            } else {
+                updateStatus('❌ Google Identity Services não carregado. Recarregue a página.', 'error');
+            }
+        }
+        
+        function logout() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.disableAutoSelect();
+            }
+            
+            currentUser = null;
+            updateUserInterface();
+            updateStatus('ℹ️ Logout realizado com sucesso!', 'info');
+        }
+        
+        function updateUserInterface() {
+            const loginSection = document.getElementById('login-section');
+            const userInfo = document.getElementById('user-info');
+            
+            if (currentUser) {
+                loginSection.style.display = 'none';
+                userInfo.style.display = 'block';
+                
+                document.getElementById('user-avatar').src = currentUser.picture;
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('user-email').textContent = currentUser.email;
+            } else {
+                loginSection.style.display = 'block';
+                userInfo.style.display = 'none';
+            }
+        }
+        
+        // Inicializa quando a página carrega
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeGoogleAuth();
+        });
+    </script>
+</body>
+</html>

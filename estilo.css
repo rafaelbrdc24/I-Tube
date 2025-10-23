@@ -264,7 +264,7 @@ header h1 {
 .user-section {
     position: absolute;
     top: 20px;
-    left: 20px;
+    right: 80px; /* Posiciona à esquerda do botão de configurações */
     z-index: 10;
 }
 
@@ -1366,6 +1366,37 @@ main {
     #playlists-button, #favorites-button {
         margin-left: 0;
         margin-top: 5px;
+    }
+    
+    /* Ajustes para seção do usuário em mobile */
+    .user-section {
+        right: 60px;
+        top: 15px;
+    }
+    
+    .user-info {
+        padding: 6px 12px;
+        gap: 8px;
+    }
+    
+    .user-avatar {
+        width: 28px;
+        height: 28px;
+    }
+    
+    .user-name {
+        font-size: 0.8em;
+        max-width: 100px;
+    }
+    
+    .login-btn {
+        padding: 8px 16px;
+        font-size: 0.8em;
+    }
+    
+    .google-icon {
+        width: 16px;
+        height: 16px;
     }
     
     main {
