@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Google OAuth - I Tube</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .debug-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .warning { background: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+        .info { background: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        button {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 16px;
+        }
+        button:hover { background: #3367d6; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 14px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .step {
+            margin: 20px 0;
+            padding: 15px;
+            border-left: 4px solid #007bff;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="debug-container">
+        <h1>🔍 Debug Google OAuth - I Tube</h1>
+        
+        <div id="status-container">
+            <div class="status info">Iniciando diagnóstico...</div>
+        </div>
+        
+        <div class="step">
+            <h3>📋 Informações do Sistema</h3>
+            <p><strong>URL Atual:</strong> <span id="current-url"></span></p>
+            <p><strong>Protocolo:</strong> <span id="protocol"></span></p>
+            <p><strong>Host:</strong> <span id="host"></span></p>
+            <p><strong>Porta:</strong> <span id="port"></span></p>
+        </div>
+        
+        <div class="step">
+            <h3>🔧 Teste de Configuração</h3>
+            <button id="test-btn" onclick="testGoogleAuth()" disabled>
+                <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google" style="width: 18px; height: 18px; margin-right: 8px;">
+                Testar Login Google
+            </button>
+            <button onclick="clearLog()">Limpar Log</button>
+        </div>
+        
+        <div class="step">
+            <h3>📝 Log de Debug</h3>
+            <div id="debug-log" class="log">Aguardando inicialização...</div>
+        </div>
+        
+        <div class="step">
+            <h3>✅ Checklist de Configuração</h3>
+            <ul id="checklist">
+                <li>⏳ Verificando Google Identity Services...</li>
+                <li>⏳ Verificando Client ID...</li>
+                <li>⏳ Verificando URLs autorizadas...</li>
+            </ul>
+        </div>
+        
+        <div id="user-info" style="display: none; margin-top: 20px; padding: 15px; background: #e8f5e8; border-radius: 5px;">
+            <h3>👤 Usuário Logado:</h3>
+            <img id="user-avatar" src="" alt="Avatar" style="width: 50px; height: 50px; border-radius: 50%; margin: 10px 0;">
+            <p><strong>Nome:</strong> <span id="user-name"></span></p>
+            <p><strong>Email:</strong> <span id="user-email"></span></p>
+            <button onclick="logout()">Sair</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let googleLoaded = false;
+        
+        // Seu Client ID aqui - SUBSTITUA pelo seu ID real
+        const CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID';
+        
+        function log(message, type = 'info') {
+            const logDiv = document.getElementById('debug-log');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#333';
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function updateStatus(message, type = 'info') {
+            const container = document.getElementById('status-container');
+            container.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        function updateChecklist(index, status, message) {
+            const checklist = document.getElementById('checklist');
+            const items = checklist.querySelectorAll('li');
+            if (items[index]) {
+                items[index].innerHTML = `${status} ${message}`;
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('debug-log').innerHTML = 'Log limpo...';
+        }
+        
+        function initializeGoogleAuth() {
+            log('Iniciando verificação do Google Identity Services...');
+            
+            const checkGoogle = () => {
+                if (typeof google !== 'undefined' && google.accounts && google.accounts.id) {
+                    log('✅ Google Identity Services detectado!', 'success');
+                    updateChecklist(0, '✅', 'Google Identity Services carregado');
+                    
+                    if (CLIENT_ID === 'YOUR_GOOGLE_CLIENT_ID') {
+                        log('❌ ERRO: Client ID não configurado!', 'error');
+                        updateStatus('❌ Configure seu Client ID no código', 'error');
+                        updateChecklist(1, '❌', 'Client ID não configurado');
+                        return;
+                    }
+                    
+                    log(`Client ID configurado: ${CLIENT_ID.substring(0, 20)}...`, 'success');
+                    updateChecklist(1, '✅', 'Client ID configurado');
+                    
+                    try {
+                        google.accounts.id.initialize({
+                            client_id: CLIENT_ID,
+                            callback: handleCredentialResponse,
+                            auto_select: false,
+                            cancel_on_tap_outside: true
+                        });
+                        
+                        log('✅ Google OAuth inicializado com sucesso!', 'success');
+                        updateChecklist(2, '✅', 'OAuth inicializado');
+                        updateStatus('✅ Tudo configurado! Teste o login agora.', 'success');
+                        
+                        googleLoaded = true;
+                        document.getElementById('test-btn').disabled = false;
+                        
+                    } catch (error) {
+                        log(`❌ Erro ao inicializar OAuth: ${error.message}`, 'error');
+                        updateStatus('❌ Erro na inicialização do OAuth', 'error');
+                    }
+                    
+                } else {
+                    log('⏳ Aguardando Google Identity Services...');
+                    setTimeout(checkGoogle, 100);
+                }
+            };
+            checkGoogle();
+        }
+        
+        function handleCredentialResponse(response) {
+            log('🎉 Resposta do Google recebida!', 'success');
+            
+            try {
+                const responsePayload = decodeJwtResponse(response.credential);
+                log(`Dados decodificados: ${JSON.stringify(responsePayload, null, 2)}`);
+                
+                currentUser = {
+                    id: responsePayload.sub,
+                    name: responsePayload.name,
+                    email: responsePayload.email,
+                    picture: responsePayload.picture,
+                    given_name: responsePayload.given_name,
+                    family_name: responsePayload.family_name
+                };
+                
+                updateUserInterface();
+                updateStatus(`✅ Login realizado com sucesso! Bem-vindo(a), ${currentUser.name}!`, 'success');
+                log(`✅ Login realizado: ${currentUser.name} (${currentUser.email})`, 'success');
+                
+            } catch (error) {
+                log(`❌ Erro ao processar login: ${error.message}`, 'error');
+                updateStatus('❌ Erro ao processar login', 'error');
+            }
+        }
+        
+        function decodeJwtResponse(token) {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        }
+        
+        function testGoogleAuth() {
+            if (!googleLoaded) {
+                log('❌ Google OAuth não está carregado', 'error');
+                return;
+            }
+            
+            log('🔄 Iniciando teste de login...');
+            updateStatus('🔄 Testando login...', 'info');
+            
+            try {
+                google.accounts.id.prompt();
+                log('✅ Prompt do Google exibido', 'success');
+            } catch (error) {
+                log(`❌ Erro ao exibir prompt: ${error.message}`, 'error');
+                updateStatus('❌ Erro ao abrir login', 'error');
+            }
+        }
+        
+        function logout() {
+            if (typeof google !== 'undefined' && google.accounts) {
+                google.accounts.id.disableAutoSelect();
+            }
+            
+            currentUser = null;
+            updateUserInterface();
+            updateStatus('ℹ️ Logout realizado', 'info');
+            log('ℹ️ Logout realizado', 'info');
+        }
+        
+        function updateUserInterface() {
+            const userInfo = document.getElementById('user-info');
+            
+            if (currentUser) {
+                userInfo.style.display = 'block';
+                document.getElementById('user-avatar').src = currentUser.picture;
+                document.getElementById('user-name').textContent = currentUser.name;
+                document.getElementById('user-email').textContent = currentUser.email;
+            } else {
+                userInfo.style.display = 'none';
+            }
+        }
+        
+        // Inicialização
+        document.addEventListener('DOMContentLoaded', function() {
+            // Mostra informações do sistema
+            document.getElementById('current-url').textContent = window.location.href;
+            document.getElementById('protocol').textContent = window.location.protocol;
+            document.getElementById('host').textContent = window.location.host;
+            document.getElementById('port').textContent = window.location.port || '80/443';
+            
+            log(`URL atual: ${window.location.href}`);
+            log(`Protocolo: ${window.location.protocol}`);
+            log(`Host: ${window.location.host}`);
+            
+            initializeGoogleAuth();
+        });
+    </script>
+</body>
+</html>
